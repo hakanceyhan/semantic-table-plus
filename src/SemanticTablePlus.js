@@ -1,11 +1,20 @@
 
 
 import React, { Component } from 'react';
-import { Table, Icon, Pagination, Input } from 'semantic-ui-react';
-import { paginate, search } from './util'
-import _ from 'lodash'
+import { Table, Pagination, Input, Button } from 'semantic-ui-react';
 
-class SemanticDndTable extends Component {
+import _ from 'lodash'
+import XLSX from 'xlsx';
+
+const paginate = (array, pageSize, pageNumber) => {
+    return array.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
+  }
+
+const search = (data, searchString) => {
+    return data.filter(r => _.includes(Object.values(r).join('|').toLowerCase(), _.toString(searchString)))
+}
+
+class SemanticTablePlus extends Component {
     constructor(props) {
         super(props);
         this.state = { 
@@ -14,6 +23,7 @@ class SemanticDndTable extends Component {
             sortColumn:null,
             sortDirection:null,
             searchString:'',
+       
          }
 
         this.createHeader = this.createHeader.bind(this);
@@ -31,12 +41,13 @@ class SemanticDndTable extends Component {
         if (!(data===null||data===undefined)){
             const size = pageSize===null||pageSize===undefined?data.length:pageSize;
             this.setState({noOfPages:Math.ceil(data.length/size),
-                           pageSize:size}); 
+                           pageSize:size,
+                         }); 
             }   
         }
 
     createHeader = () => {
-        const { columns, searchable } = this.props;
+        const { columns, searchable,exportable } = this.props;
         const { sortColumn, sortDirection, searchString } = this.state;
       
         const headerCells = columns.map((c, i)=>{
@@ -51,24 +62,58 @@ class SemanticDndTable extends Component {
                     </Table.HeaderCell>)})
         headerCells.unshift(<Table.HeaderCell key='column-f' id='column-f' />)
         
-        const searchBox =   <Table.Row>
+        const utilityBox =   <Table.Row>
                                 <Table.HeaderCell/>
-                                <Table.HeaderCell colSpan={columns.length}>
-                                    <Input  icon='search' placeholder='Search...' onChange={this.updateSearchString} value={searchString}/>
+                                <Table.HeaderCell colSpan={columns.length} >
+                                    {searchable?<Input  {...this.props.SearchInputProps} icon='search' placeholder='Search...' onChange={this.updateSearchString} value={searchString}/>:null}
+                                    {exportable?<Button {...this.props.ExportButtonProps} floated='right' onClick={this.exportToExcel}>Export</Button>:null}
                                 </Table.HeaderCell>
                             </Table.Row>
 
         const header = <Table.Header fullWidth>
-                            {searchable?searchBox:null}
+                            {searchable|exportable?utilityBox:null}
                             <Table.Row>{headerCells}</Table.Row>
                         </Table.Header>     
         return header;
     };
 
+    handleData = (data) => {
+        const { searchable } = this.props;
+        const { sortColumn, sortDirection, searchString } = this.state;
+        if (searchable) {
+            data = search(data,searchString);
+          };
+
+        if (sortColumn!==null){
+            data = _.sortBy(data, sortColumn);
+        }
+
+        if (sortDirection==='descending'){
+            data.reverse();
+        };
+
+        return data;
+    };
+
+    exportToExcel = () => {
+        const data = this.handleData(this.props.data);
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Sheet 1')
+        XLSX.writeFile(wb, 'download.xlsx')
+    }
+
     createBody = () => {
 
-        const { data, columns, searchable } = this.props;
-        const { page, sortColumn, sortDirection, searchString, pageSize } = this.state;
+        const { data, columns, cellRenderer, onRowSelect } = this.props;
+        const { page,  pageSize } = this.state;
+
+        const selectable = onRowSelect!==undefined;
+
+        const renderCells = cellRenderer!==undefined;
+        
+        const shouldRenderCell = (column) =>  {if(renderCells){return _.includes(Object.keys(cellRenderer),column)}else{return false}}
+
         
         if (data===null||data===undefined){
             return null;
@@ -76,19 +121,7 @@ class SemanticDndTable extends Component {
         
         let finalData = data.map((d,i)=>{return{...d,index:i}});
         
-        if (searchable) {
-            finalData = search(finalData,searchString);
-          };
-
-        if (sortColumn!==null){
-            finalData = _.sortBy(finalData, sortColumn);
-        }
-
-        if (sortDirection==='descending'){
-            finalData.reverse();
-        };
-
-  
+        finalData = this.handleData(finalData);
        
         const rows = finalData.map((r,i)=>{ 
                            
@@ -96,15 +129,15 @@ class SemanticDndTable extends Component {
                                 return <Table.Cell 
                                             key={`cell-${r.index}-${ci}`} 
                                             id={`cell-${r.index}-${ci}`}>
-                                            {r[c]}
+                                            {shouldRenderCell(c)?cellRenderer[c](r[c],r.index):r[c]}
                                         </Table.Cell>
                             })
                             cells.unshift(<Table.Cell 
                                             collapsing 
                                             key={`cells-${r.index}`} 
                                             id={`cells-${r.index}`}
-                                            style={{background:'#f9fafb'}}>
-                                             <Icon name='ellipsis vertical' />
+                                            >   
+                                                {selectable?<Button circular toggle size='mini' icon='chevron right' onClick={()=>{this.props.onRowSelect(r)}}/>:null}
                                         </Table.Cell>)
                             const row = <Table.Row
                                             key={`row-${r.index}`} 
@@ -133,6 +166,7 @@ class SemanticDndTable extends Component {
                          activePage={page}
                          totalPages={noOfPages}
                          onPageChange={this.handlePaginationChange}
+                         {...this.props.PaginationProps}
                          />
                     </Table.HeaderCell>
                  </Table.Row>
@@ -163,7 +197,7 @@ class SemanticDndTable extends Component {
         const body = this.createBody()
         const footer = this.createFooter()
         return ( 
-            <Table sortable celled>
+            <Table {...this.props.TableProps} sortable >
                 {header}
                 {body}
                 {footer}
@@ -172,4 +206,4 @@ class SemanticDndTable extends Component {
     }
 }
  
-export default SemanticDndTable;
+export default SemanticTablePlus;
