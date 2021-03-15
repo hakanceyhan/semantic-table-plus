@@ -21,15 +21,15 @@ class App extends Component {
 				<SemanticTablePlus
 					data={data}
 					columns={columns}
-					pageSize={15}
-					exportable={true}
-					searchable={true}
 					TableProps={{celled:true}}
+					pageSize={15}
 					PaginationProps={{}}
-					SeachInputProps={{}}
-					ExportButtonProps={{}}
+					searchable={true}
+					SeachInputProps={{size:'big'}}
+					exportable={true}
+					ExportButtonProps={{color:'red'}}
 					onRowSelect={this.rowSelector}
-					cellRenderer={{sepal_length:(c,i)=>{return <Button key={i}>{c}</Button>}}}	
+					cellRenderer={{species:(c,i)=>{return <Button key={i}>{c}</Button>}}}	
 				/>
 			</div>
 		);
