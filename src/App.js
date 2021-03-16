@@ -13,7 +13,7 @@ class App extends Component {
         this.rowSelector = this.rowSelector.bind(this); 
     }
 
-	rowSelector = (data) => {console.log(data)}
+	rowSelector = (data) => {alert(JSON.stringify(data,null,2))}
 
 	render() {
 		return (
@@ -21,13 +21,8 @@ class App extends Component {
 				<SemanticTablePlus
 					data={data}
 					columns={columns}
-					TableProps={{celled:true}}
-					pageSize={15}
-					PaginationProps={{}}
-					searchable={true}
-					SeachInputProps={{size:'big'}}
-					exportable={true}
-					ExportButtonProps={{color:'red'}}
+					TableProps={{celled:true, collapsing:true, compact:true}}
+					pageSize={10}
 					onRowSelect={this.rowSelector}
 					cellRenderer={{species:(c,i)=>{return <Button key={i}>{c}</Button>}}}	
 				/>
