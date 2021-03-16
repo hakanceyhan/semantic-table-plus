@@ -119,7 +119,7 @@ class SemanticTablePlus extends Component {
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, 'Sheet 1')
-        XLSX.writeFile(wb, 'download.xlsx')
+        XLSX.writeFile(wb, this.props.exportFileName)
     }
 
     createBody = () => {
@@ -238,9 +238,11 @@ SemanticTablePlus.defaultProps = {
     SearchInputProps: {icon:'search', placeholder:'Search...'},
     exportable: true,
     ExportButtonProps: {floated:'right', buttonText:'Export'},
+    exportFileName:'download.xlsx',
     onRowSelect: undefined,
     RowSelectButtonProps: {circular:true, toggle:true, size:'mini', icon:'chevron right', buttonText:null},
     cellRenderer: undefined
+    
   };
  
 export default SemanticTablePlus;
