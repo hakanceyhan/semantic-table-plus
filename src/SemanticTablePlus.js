@@ -8,11 +8,27 @@ import XLSX from 'xlsx';
 
 const paginate = (array, pageSize, pageNumber) => {
     return array.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
-  }
+};
 
 const search = (data, searchString) => {
     return data.filter(r => _.includes(Object.values(r).join('|').toLowerCase(), _.toString(searchString)))
-}
+};
+
+const columner = (columns) => {
+    let columnNames = []
+    let columnIndex = []
+    if (columns instanceof Array) {
+        columnNames = columns;
+        columnIndex = columns;
+    } else if (columns instanceof Object) {
+        columnNames = Object.values(columns);
+        columnIndex = Object.keys(columns);
+    } else {
+        columnNames = undefined;
+        columnIndex = undefined;
+    }
+    return {columnNames, columnIndex}
+};
 
 class SemanticTablePlus extends Component {
     constructor(props) {
@@ -49,8 +65,11 @@ class SemanticTablePlus extends Component {
     createHeader = () => {
         const { columns, searchable,exportable } = this.props;
         const { sortColumn, sortDirection, searchString } = this.state;
-      
-        const headerCells = columns.map((c, i)=>{
+
+        const { columnNames , columnIndex } = columner(columns);
+
+
+        const headerCells = columnIndex.map((c, i)=>{
             return (<Table.HeaderCell 
                         key={`column-${i}`} 
                         id={c}
@@ -58,15 +77,15 @@ class SemanticTablePlus extends Component {
                         sorted={sortColumn === c ? sortDirection : null}
                         onClick={this.handleColumnSort}
                         >
-                        {c}
+                        {columnNames[i]}
                     </Table.HeaderCell>)})
         headerCells.unshift(<Table.HeaderCell key='column-f' id='column-f' />)
         
         const utilityBox =   <Table.Row>
                                 <Table.HeaderCell/>
-                                <Table.HeaderCell colSpan={columns.length} >
-                                    {searchable?<Input  {...this.props.SearchInputProps} icon='search' placeholder='Search...' onChange={this.updateSearchString} value={searchString}/>:null}
-                                    {exportable?<Button {...this.props.ExportButtonProps} floated='right' onClick={this.exportToExcel}>Export</Button>:null}
+                                <Table.HeaderCell colSpan={columnNames.length} >
+                                    {searchable?<Input  {...this.props.SearchInputProps}  onChange={this.updateSearchString} value={searchString}/>:null}
+                                    {exportable?<Button {...this.props.ExportButtonProps} floated="right"  onClick={this.exportToExcel}>{this.props.ExportButtonProps.buttonText||'Export'}</Button>:null}
                                 </Table.HeaderCell>
                             </Table.Row>
 
@@ -100,13 +119,15 @@ class SemanticTablePlus extends Component {
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, 'Sheet 1')
-        XLSX.writeFile(wb, 'download.xlsx')
+        XLSX.writeFile(wb, this.props.exportFileName)
     }
 
     createBody = () => {
 
         const { data, columns, cellRenderer, onRowSelect } = this.props;
         const { page,  pageSize } = this.state;
+
+        const { columnIndex } = columner(columns);
 
         const selectable = onRowSelect!==undefined;
 
@@ -125,7 +146,7 @@ class SemanticTablePlus extends Component {
        
         const rows = finalData.map((r,i)=>{ 
                            
-                            const cells = columns.map((c, ci)=>{
+                            const cells = columnIndex.map((c, ci)=>{
                                 return <Table.Cell 
                                             key={`cell-${r.index}-${ci}`} 
                                             id={`cell-${r.index}-${ci}`}>
@@ -137,7 +158,7 @@ class SemanticTablePlus extends Component {
                                             key={`cells-${r.index}`} 
                                             id={`cells-${r.index}`}
                                             >   
-                                                {selectable?<Button circular toggle size='mini' icon='chevron right' onClick={()=>{this.props.onRowSelect(r)}}/>:null}
+                                                {selectable?<Button {...this.props.RowSelectButtonProps} onClick={()=>{this.props.onRowSelect(r)}}>{this.props.RowSelectButtonProps.buttonText}</Button>:null}
                                         </Table.Cell>)
                             const row = <Table.Row
                                             key={`row-${r.index}`} 
@@ -155,19 +176,21 @@ class SemanticTablePlus extends Component {
 
     createFooter = () => {
         const { page, noOfPages } = this.state;
-        const {pageSize} = this.props;
+        const {pageSize, columns} = this.props;
+        const { columnNames  } = columner(columns);
         if (pageSize!==null&&pageSize!==undefined) {
 
         return <Table.Footer>
                 <Table.Row>
                     <Table.HeaderCell/>
-                    <Table.HeaderCell colSpan={this.props.columns.length}>
+                    <Table.HeaderCell colSpan={columnNames.length}>
+                        {noOfPages>1?
                          <Pagination
                          activePage={page}
                          totalPages={noOfPages}
                          onPageChange={this.handlePaginationChange}
                          {...this.props.PaginationProps}
-                         />
+                         />:null}
                     </Table.HeaderCell>
                  </Table.Row>
                </Table.Footer>
@@ -205,5 +228,22 @@ class SemanticTablePlus extends Component {
          );
     }
 }
+
+SemanticTablePlus.defaultProps = {
+    data:[],
+    columns:[],
+    TableProps: {celled:true},
+    pageSize: 10,
+    PaginationProps: {},
+    searchable: true,
+    SearchInputProps: {icon:'search', placeholder:'Search...'},
+    exportable: true,
+    ExportButtonProps: {floated:'right', buttonText:'Export'},
+    exportFileName:'download.xlsx',
+    onRowSelect: undefined,
+    RowSelectButtonProps: {circular:true, toggle:true, size:'mini', icon:'chevron right', buttonText:null},
+    cellRenderer: undefined
+    
+  };
  
 export default SemanticTablePlus;
