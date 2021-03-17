@@ -184,12 +184,13 @@ class SemanticTablePlus extends Component {
                 <Table.Row>
                     <Table.HeaderCell/>
                     <Table.HeaderCell colSpan={columnNames.length}>
+                        {noOfPages>1?
                          <Pagination
                          activePage={page}
                          totalPages={noOfPages}
                          onPageChange={this.handlePaginationChange}
                          {...this.props.PaginationProps}
-                         />
+                         />:null}
                     </Table.HeaderCell>
                  </Table.Row>
                </Table.Footer>
